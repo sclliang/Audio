@@ -216,6 +216,30 @@ Device ResolveOptionalDevice(EDataFlow flow, int argc, wchar_t* argv[], int sele
   return argc > selectorIndex ? SelectDevice(flow, argv[selectorIndex]) : DefaultDevice(flow);
 }
 
+Device NextDefaultDevice(EDataFlow flow) {
+  auto devices = EnumerateDevices(flow);
+  if (devices.empty()) {
+    throw std::runtime_error("No active audio devices were found");
+  }
+
+  const std::wstring defaultId = DefaultDevice(flow).id;
+  for (size_t i = 0; i < devices.size(); ++i) {
+    if (devices[i].id == defaultId) {
+      const size_t nextIndex = i + 1 < devices.size() ? i + 1 : 0;
+      return std::move(devices[nextIndex]);
+    }
+  }
+
+  return std::move(devices[0]);
+}
+
+Device ResolveSwitchDevice(EDataFlow flow, const std::wstring& selector) {
+  if (ToLower(selector) == L"next") {
+    return NextDefaultDevice(flow);
+  }
+  return SelectDevice(flow, selector);
+}
+
 void ListDevices(EDataFlow flow, const wchar_t* heading) {
   std::wcout << heading << L":\n";
   auto devices = EnumerateDevices(flow);
@@ -440,8 +464,8 @@ void PrintUsage() {
       << L"Audio endpoint control for Windows\n\n"
       << L"Usage:\n"
       << L"  audioctl list [all|speakers|microphones]\n"
-      << L"  audioctl 1 <device-index|name|id>\n"
-      << L"  audioctl 2 <device-index|name|id>\n"
+      << L"  audioctl 1 <next|device-index|name|id>\n"
+      << L"  audioctl 2 <next|device-index|name|id>\n"
       << L"  audioctl 3 <0-100> [device-index|name|id]\n"
       << L"  audioctl 4 <0-100> [device-index|name|id]\n"
       << L"  audioctl 5 <dB> [device-index|name|id]\n"
@@ -487,7 +511,7 @@ int Run(int argc, wchar_t* argv[]) {
     if (argc != 3) {
       throw std::runtime_error("Actions 1 and 2 require exactly one device selector");
     }
-    SetDefaultDevice(SelectDevice(action == L"1" ? eRender : eCapture, argv[2]));
+    SetDefaultDevice(ResolveSwitchDevice(action == L"1" ? eRender : eCapture, argv[2]));
     return 0;
   }
   if (action == L"3" || action == L"4") {
