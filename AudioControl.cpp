@@ -50,6 +50,8 @@ IPolicyConfig : public IUnknown {
 
 const CLSID CLSID_PolicyConfigClient = {
     0x870af99c, 0x171d, 0x4f9e, {0xaf, 0x0d, 0xe6, 0x3d, 0xf4, 0x0c, 0x2b, 0xc9}};
+const IID IID_PolicyConfig = {
+    0xf8679f50, 0x850a, 0x41cf, {0x9c, 0x72, 0x43, 0x0f, 0x29, 0x02, 0x90, 0xc8}};
 
 class ComApartment {
  public:
@@ -238,7 +240,7 @@ void ListDevices(EDataFlow flow, const wchar_t* heading) {
 void SetDefaultDevice(const Device& device) {
   ComPtr<IPolicyConfig> policy;
   Check(CoCreateInstance(CLSID_PolicyConfigClient, nullptr, CLSCTX_ALL,
-                         __uuidof(IPolicyConfig), &policy),
+                         IID_PolicyConfig, &policy),
         "Create PolicyConfigClient");
   for (ERole role : {eConsole, eMultimedia, eCommunications}) {
     Check(policy->SetDefaultEndpoint(device.id.c_str(), role), "SetDefaultEndpoint");
